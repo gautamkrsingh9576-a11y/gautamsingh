@@ -288,3 +288,59 @@ body {
 @media(max-width:760px){
   .history-table th.history-topic,.history-table td.history-topic{min-width:220px;max-width:220px}
 }
+
+
+/* Firebase connection + private dashboard gate */
+.config-textarea{
+  resize:vertical;
+  min-height:142px;
+  font-family:"DM Mono",monospace;
+  font-size:10px;
+  line-height:1.55;
+}
+.auth-gate{
+  position:fixed;
+  inset:0;
+  z-index:90;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:
+    radial-gradient(circle at 50% 30%,rgba(68,155,255,.16),transparent 30rem),
+    rgba(4,12,28,.88);
+  backdrop-filter:blur(18px);
+}
+.auth-gate[hidden]{display:none}
+.auth-card{
+  width:min(430px,100%);
+  padding:30px;
+  border-radius:22px;
+  border:1px solid rgba(111,179,255,.24);
+  background:linear-gradient(160deg,#132d52,#0a1c35);
+  box-shadow:0 34px 100px rgba(0,5,22,.48);
+  text-align:center;
+}
+.auth-card img{
+  width:72px;height:72px;border-radius:50%;object-fit:cover;
+  border:1px solid rgba(194,232,255,.75);
+  box-shadow:0 0 0 5px rgba(86,179,255,.08),0 14px 36px rgba(0,95,220,.2);
+  margin-bottom:18px;
+}
+.auth-card h2{
+  margin:0 0 10px;
+  font-size:25px;
+  letter-spacing:-.04em;
+}
+.auth-card p:not(.section-label){
+  margin:0 auto 20px;
+  max-width:330px;
+  color:#a9c7df;
+  font-size:11px;
+  line-height:1.65;
+}
+.auth-card .btn{width:100%;min-height:44px}
+.auth-card .text-btn{
+  margin-top:13px;
+  color:#91b6d3;
+}
+.auth-card .text-btn:hover{color:#6beaff}
