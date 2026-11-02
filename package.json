@@ -1,0 +1,13 @@
+{
+  "name": "etech-trend-radar",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "E-TECH AI-driven consumer technology trend discovery automation",
+  "scripts": {
+    "trend:run": "node scripts/trend-tracker.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.5.0"
+  }
+}
