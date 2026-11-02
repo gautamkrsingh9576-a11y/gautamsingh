@@ -1,0 +1,47 @@
+name: Daily E-TECH Trend Automation
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 7 * * *"
+      timezone: "Asia/Kolkata"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: etech-trend-automation
+  cancel-in-progress: false
+
+jobs:
+  collect-and-analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm install --omit=dev
+
+      - name: Run E-TECH trend tracker
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5.6' }}
+          REGION_CODE: "IN"
+          TECH_SEEDS: ${{ vars.TECH_SEEDS }}
+          TECH_DEALS_JSON_URL: ${{ secrets.TECH_DEALS_JSON_URL }}
+          TECH_DEALS_JSON: ${{ secrets.TECH_DEALS_JSON }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: npm run trend:run
