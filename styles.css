@@ -233,3 +233,58 @@ body {
 @media (prefers-reduced-motion:reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+
+/* 30-day historical matrix */
+.history-note{
+  margin:-6px 0 14px;
+  padding:11px 13px;
+  border:1px solid rgba(90,194,236,.16);
+  background:rgba(24,67,102,.22);
+  border-radius:11px;
+  color:#a9c7df;
+  font-size:10px;
+  line-height:1.55;
+}
+.history-wrap{max-width:100%;overflow:auto}
+.history-table{min-width:2100px}
+.history-table th,.history-table td{
+  min-width:82px;
+  text-align:right;
+  white-space:nowrap;
+  font-family:"DM Mono",monospace;
+  font-size:9px;
+}
+.history-table th.history-topic,
+.history-table td.history-topic{
+  position:sticky;
+  left:0;
+  z-index:3;
+  min-width:300px;
+  max-width:300px;
+  text-align:left;
+  font-family:Inter,system-ui,sans-serif;
+  background:#0e213d;
+  box-shadow:1px 0 0 rgba(106,159,218,.16);
+}
+.history-table thead th.history-topic{
+  z-index:4;
+  background:#102746;
+}
+.history-table td.history-topic strong{
+  max-width:275px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.history-table td.history-topic small{
+  display:block;
+  margin-top:4px;
+  color:#7895b3;
+  font-size:9px;
+}
+.history-empty{color:#48637f}
+.history-table tbody tr:hover td.history-topic{background:#143050}
+@media(max-width:760px){
+  .history-table th.history-topic,.history-table td.history-topic{min-width:220px;max-width:220px}
+}
