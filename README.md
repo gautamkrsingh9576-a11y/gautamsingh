@@ -78,3 +78,46 @@ The trend collector can write the data into Supabase through the daily GitHub Ac
 Recommended collector flow:
 
 YouTube / approved commerce APIs → normalization → trend score → Supabase → AI ideas → notifications → dashboard.
+
+
+## Supabase live connection
+
+The dashboard is ready for automatic Supabase connection during GitHub Pages deployment.
+
+### Database
+
+Apply:
+
+`supabase/schema.sql`
+
+This creates append-only tables:
+
+- `trend_items` — one identity row per tracked trend/video
+- `trend_observations` — a new snapshot on every automation run
+- `deal_items` — one identity row per product
+- `deal_observations` — a new price/deal snapshot on every run
+- `video_ideas` — AI ideas are inserted as new rows
+- `automation_runs` — one row per workflow run
+
+Raw history is **not automatically deleted**. The dashboard displays the latest 30 days, with one date per column.
+
+### GitHub Pages connection
+
+In this repository, add these under **Settings → Secrets and variables → Actions → Secrets**:
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+
+The Pages workflow creates `runtime-config.js` during deployment. Do not add a service-role key to the static dashboard.
+
+### 30-Day History
+
+Open **30-Day History** in the dashboard.
+
+It provides separate daily columns for:
+
+- Trend Score
+- Views / Hour
+- Deal Price
+
+Each run appends observations. Previous daily data is not overwritten.
