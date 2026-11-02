@@ -40,8 +40,52 @@ const DEMO = {
   series:[61,66,64,73,78,85,96]
 };
 
+function buildDemoHistory(){
+  const dates=[...Array(30)].map((_,i)=>{
+    const d=new Date(); d.setDate(d.getDate()-(29-i)); return d.toISOString().slice(0,10);
+  });
+  const trendHistory=[];
+  DEMO.trends.forEach((t,ti)=>{
+    dates.forEach((date,di)=>{
+      const progress=(di+1)/dates.length;
+      trendHistory.push({
+        trend_item_id:"demo-trend-"+ti,
+        title:t.title,
+        channel:t.channel,
+        source:t.source,
+        date,
+        observed_at:date+"T07:30:00Z",
+        views:Math.max(1000,Math.round(t.views*(0.42+0.58*progress))),
+        views_per_hour:Math.max(100,Math.round(t.vph*(0.55+0.45*progress))),
+        trend_score:Math.max(20,Math.round(t.score*(0.70+0.30*progress)))
+      });
+    });
+  });
+  const dealHistory=[];
+  DEMO.deals.forEach((d,di)=>{
+    const base=Number(String(d.price).replace(/[^0-9.]/g,""))||1000;
+    dates.forEach((date,idx)=>{
+      const factor=1.09-(idx/dates.length)*0.09+(di*0.003);
+      dealHistory.push({
+        deal_item_id:"demo-deal-"+di,
+        title:d.title,
+        source:d.source,
+        date,
+        observed_at:date+"T07:30:00Z",
+        price:Math.round(base*factor),
+        currency:"INR",
+        discount_pct:Number(String(d.discount).replace(/[^0-9.]/g,""))||0,
+        deal_score:d.score
+      });
+    });
+  });
+  return {trends:trendHistory,deals:dealHistory,dates};
+}
+
 const state = {
   data: structuredClone(DEMO),
+  history: buildDemoHistory(),
+  historyMode:"score",
   mode:"demo",
   range:7,
   ideaFilter:"all"
@@ -183,6 +227,57 @@ function renderSources(){
     <div class="source-meta"><span class="status ${s.state==="Connected"||s.state==="Ready"?"success":""}">${esc(s.state)}</span></div></article>`).join("");
 }
 
+function last30Dates(){
+  return [...Array(30)].map((_,i)=>{
+    const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-i); return d.toISOString().slice(0,10);
+  });
+}
+
+function formatHistoryDate(date){
+  const d=new Date(date+"T00:00:00");
+  return d.toLocaleDateString("en-IN",{day:"2-digit",month:"short"});
+}
+
+function renderHistory(){
+  const mode=state.historyMode;
+  const dates=last30Dates();
+  const raw=mode==="deals" ? state.history.deals : state.history.trends;
+  const idKey=mode==="deals" ? "deal_item_id" : "trend_item_id";
+  const valueKey=mode==="score" ? "trend_score" : mode==="velocity" ? "views_per_hour" : "price";
+  const groups=new Map();
+
+  for(const row of raw){
+    const id=row[idKey] || row.title;
+    if(!groups.has(id)) groups.set(id,{title:row.title||"Untitled",source:row.channel||row.source||"",values:new Map()});
+    const date=(row.observed_at||row.date||"").slice(0,10);
+    if(!date) continue;
+    const existing=groups.get(id).values.get(date);
+    if(!existing || new Date(row.observed_at||date) >= new Date(existing.observed_at||date)){
+      groups.get(id).values.set(date,row);
+    }
+  }
+
+  const rows=[...groups.values()].sort((a,b)=>{
+    const av=a.values.get(dates[0])?.[valueKey] ?? -Infinity;
+    const bv=b.values.get(dates[0])?.[valueKey] ?? -Infinity;
+    return Number(bv)-Number(av);
+  }).slice(0,25);
+
+  $("#historyHead").innerHTML=`<tr><th class="history-topic">Topic / product</th>${dates.map(d=>`<th>${formatHistoryDate(d)}</th>`).join("")}</tr>`;
+  $("#historyBody").innerHTML=rows.map(group=>`
+    <tr>
+      <td class="history-topic"><strong>${esc(group.title)}</strong><small>${esc(group.source)}</small></td>
+      ${dates.map(date=>{
+        const row=group.values.get(date);
+        if(!row) return '<td class="history-empty">—</td>';
+        const val=Number(row[valueKey]);
+        if(mode==="deals") return `<td>${new Intl.NumberFormat("en-IN",{style:"currency",currency:row.currency||"INR",maximumFractionDigits:0}).format(val||0)}</td>`;
+        if(mode==="velocity") return `<td>${fmt(val)}/h</td>`;
+        return `<td><span class="table-score">${Number.isFinite(val)?Math.round(val):"—"}</span></td>`;
+      }).join("")}
+    </tr>`).join("") || '<tr><td>No historical data yet.</td></tr>';
+}
+
 function drawChart(){
   const canvas=$("#trendChart"); if(!canvas || !canvas.offsetParent) return;
   const ratio=window.devicePixelRatio||1, rect=canvas.getBoundingClientRect();
@@ -203,7 +298,7 @@ function drawChart(){
 }
 
 function renderAll(){
-  renderOverview();renderTrends();renderIdeas();renderDeals();renderCompetitors();renderRuns();renderSources();
+  renderOverview();renderTrends();renderHistory();renderIdeas();renderDeals();renderCompetitors();renderRuns();renderSources();
   $("#lastUpdated").textContent="Updated "+new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
 }
 
@@ -215,28 +310,46 @@ async function api(path, config){
 }
 
 async function loadSupabase(){
-  const url=localStorage.getItem("trendRadar.supabaseUrl");
-  const anon=localStorage.getItem("trendRadar.supabaseAnon");
-  if(!url||!anon){ state.data=structuredClone(DEMO);state.mode="demo";setConnection(false);renderAll();return; }
+  const runtime=window.__TREND_RADAR_CONFIG__ || {};
+  const url=runtime.supabaseUrl || localStorage.getItem("trendRadar.supabaseUrl");
+  const anon=runtime.supabaseAnonKey || localStorage.getItem("trendRadar.supabaseAnon");
+  if(!url||!anon){
+    state.data=structuredClone(DEMO);state.history=buildDemoHistory();state.mode="demo";setConnection(false);renderAll();return;
+  }
   $("#supabaseUrl").value=url;$("#supabaseAnon").value=anon;
   const cfg={url,anon};
+  const since=new Date(Date.now()-30*24*60*60*1000).toISOString();
+  const sinceEncoded=encodeURIComponent(since);
   try{
     const [trendObs,ideaRows,dealObs,runs]=await Promise.all([
-      api("trend_observations?select=views,views_per_hour,trend_score,observed_at,trend_items(title,url,author_name,source,published_at)&order=trend_score.desc&limit=50",cfg),
-      api("video_ideas?select=*&order=priority_score.desc&limit=30",cfg),
-      api("deal_observations?select=price,currency,discount_pct,sales_rank,deal_score,observed_at,deal_items(title,url,source)&order=deal_score.desc&limit=30",cfg),
-      api("automation_runs?select=*&order=started_at.desc&limit=20",cfg)
+      api(`trend_observations?select=trend_item_id,views,views_per_hour,trend_score,observed_at,trend_items(title,url,author_name,source,published_at)&observed_at=gte.${sinceEncoded}&order=observed_at.asc&limit=5000`,cfg),
+      api(`video_ideas?select=*&created_at=gte.${sinceEncoded}&order=created_at.desc&limit=1000`,cfg),
+      api(`deal_observations?select=deal_item_id,price,currency,discount_pct,sales_rank,deal_score,observed_at,deal_items(title,url,source)&observed_at=gte.${sinceEncoded}&order=observed_at.asc&limit=5000`,cfg),
+      api(`automation_runs?select=*&started_at=gte.${sinceEncoded}&order=started_at.desc&limit=1000`,cfg)
     ]);
 
-    const trends=trendObs.map(o=>({
+    const latestTrendMap=new Map();
+    for(const o of trendObs){
+      const key=o.trend_item_id||o.trend_items?.title;
+      const previous=latestTrendMap.get(key);
+      if(!previous || new Date(o.observed_at)>new Date(previous.observed_at)) latestTrendMap.set(key,o);
+    }
+    const latestDealMap=new Map();
+    for(const o of dealObs){
+      const key=o.deal_item_id||o.deal_items?.title;
+      const previous=latestDealMap.get(key);
+      if(!previous || new Date(o.observed_at)>new Date(previous.observed_at)) latestDealMap.set(key,o);
+    }
+
+    const trends=[...latestTrendMap.values()].sort((a,b)=>Number(b.trend_score)-Number(a.trend_score)).slice(0,50).map(o=>({
       title:o.trend_items?.title||"Untitled",source:o.trend_items?.source||"YouTube",channel:o.trend_items?.author_name||"Unknown",
       views:Number(o.views)||0,vph:Number(o.views_per_hour)||0,score:Number(o.trend_score)||0,observed:timeAgo(o.observed_at),url:o.trend_items?.url||"#"
     }));
-    const ideas=ideaRows.map(i=>({
+    const ideas=ideaRows.slice(0,60).map(i=>({
       score:Number(i.priority_score)||0,title:i.suggested_title||i.topic||"Untitled idea",hook:i.hook||"",why:i.why_now||i.angle||"",
       format:i.video_format||"Video",status:Number(i.priority_score)>=90?"Publish today":Number(i.priority_score)>=80?"Strong":"Watch"
     }));
-    const deals=dealObs.map(o=>({
+    const deals=[...latestDealMap.values()].sort((a,b)=>Number(b.deal_score)-Number(a.deal_score)).slice(0,50).map(o=>({
       title:o.deal_items?.title||"Untitled product",source:o.deal_items?.source||"Marketplace",
       price:o.price?new Intl.NumberFormat("en-IN",{style:"currency",currency:o.currency||"INR",maximumFractionDigits:0}).format(Number(o.price)):"—",
       discount:o.discount_pct!=null?Number(o.discount_pct).toFixed(0)+"%":"—",rank:o.sales_rank?"#"+o.sales_rank:"—",score:Number(o.deal_score)||0,url:o.deal_items?.url||"#"
@@ -246,11 +359,15 @@ async function loadSupabase(){
       duration:r.finished_at&&r.started_at?Math.max(1,Math.round((new Date(r.finished_at)-new Date(r.started_at))/1000))+"s":"—"
     }));
 
+    state.history={
+      trends:trendObs.map(o=>({...o,title:o.trend_items?.title||"Untitled",channel:o.trend_items?.author_name||"",source:o.trend_items?.source||"YouTube"})),
+      deals:dealObs.map(o=>({...o,title:o.deal_items?.title||"Untitled product",source:o.deal_items?.source||"Marketplace"}))
+    };
     state.data={...structuredClone(DEMO),trends:trends.length?trends:DEMO.trends,ideas:ideas.length?ideas:DEMO.ideas,deals:deals.length?deals:DEMO.deals,runs:runRows.length?runRows:DEMO.runs};
     state.data.series=(state.data.trends.slice(0,7).map(x=>x.score).reverse());
-    state.mode="live";setConnection(true,"Supabase connected");renderAll();toast("Live Supabase data loaded");
+    state.mode="live";setConnection(true,"Supabase · 30-day history");renderAll();toast("Live Supabase data loaded");
   }catch(err){
-    console.error(err);state.data=structuredClone(DEMO);state.mode="demo";setConnection(false,"Connection failed · demo shown");renderAll();toast("Could not read Supabase. Check URL, anon key and RLS.");
+    console.error(err);state.data=structuredClone(DEMO);state.history=buildDemoHistory();state.mode="demo";setConnection(false,"Connection failed · demo shown");renderAll();toast("Could not read Supabase. Check connection and RLS.");
   }
 }
 
@@ -260,6 +377,9 @@ $("#mobileMenu").addEventListener("click",()=>$("#sidebar").classList.toggle("op
 $("#refreshBtn").addEventListener("click",async()=>{await loadSupabase();toast(state.mode==="live"?"Live data refreshed":"Demo data refreshed");});
 $("#rangeSelect").addEventListener("change",e=>{state.range=Number(e.target.value);toast("Date range set to "+e.target.options[e.target.selectedIndex].text);});
 $("#trendSearch").addEventListener("input",renderTrends);
+$("[data-history-mode]").forEach(btn=>btn.addEventListener("click",()=>{
+  $("[data-history-mode]").forEach(x=>x.classList.remove("active"));btn.classList.add("active");state.historyMode=btn.dataset.historyMode;renderHistory();
+}));
 $$("[data-idea-filter]").forEach(btn=>btn.addEventListener("click",()=>{
   $$("[data-idea-filter]").forEach(x=>x.classList.remove("active"));btn.classList.add("active");state.ideaFilter=btn.dataset.ideaFilter;renderIdeas();
 }));
@@ -271,10 +391,10 @@ $("#saveConnection").addEventListener("click",async()=>{
 });
 $("#clearConnection").addEventListener("click",()=>{
   localStorage.removeItem("trendRadar.supabaseUrl");localStorage.removeItem("trendRadar.supabaseAnon");
-  $("#supabaseUrl").value="";$("#supabaseAnon").value="";state.data=structuredClone(DEMO);state.mode="demo";setConnection(false);renderAll();toast("Demo mode enabled");
+  $("#supabaseUrl").value="";$("#supabaseAnon").value="";state.data=structuredClone(DEMO);state.history=buildDemoHistory();state.mode="demo";setConnection(false);renderAll();toast("Demo mode enabled");
 });
 window.addEventListener("resize",()=>requestAnimationFrame(drawChart));
 
 const initial=(location.hash||"#overview").slice(1);
-route(["overview","trends","ideas","deals","competitors","automations","sources","settings"].includes(initial)?initial:"overview");
+route(["overview","trends","history","ideas","deals","competitors","automations","sources","settings"].includes(initial)?initial:"overview");
 loadSupabase();
