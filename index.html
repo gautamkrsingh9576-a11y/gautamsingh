@@ -27,6 +27,7 @@
       <nav class="nav" aria-label="Dashboard navigation">
         <button class="nav-item active" data-view="overview"><span class="nav-icon">◫</span>Overview</button>
         <button class="nav-item" data-view="trends"><span class="nav-icon">↗</span>Trends</button>
+        <button class="nav-item" data-view="history"><span class="nav-icon">◷</span>30-Day History</button>
         <button class="nav-item" data-view="ideas"><span class="nav-icon">✦</span>AI Video Ideas</button>
         <button class="nav-item" data-view="deals"><span class="nav-icon">%</span>Tech Deals</button>
         <button class="nav-item" data-view="competitors"><span class="nav-icon">◎</span>Competitors</button>
@@ -125,6 +126,26 @@
         </div>
       </section>
 
+      <section id="view-history" class="view">
+        <div class="section-toolbar">
+          <div><p class="section-label">30-DAY RETENTION</p><h2>Historical data</h2></div>
+          <div class="filter-pills">
+            <button class="pill active" data-history-mode="score">Trend score</button>
+            <button class="pill" data-history-mode="velocity">Views / hour</button>
+            <button class="pill" data-history-mode="deals">Deal price</button>
+          </div>
+        </div>
+        <div class="history-note">
+          Every daily snapshot is stored separately. The dashboard never overwrites a previous observation and keeps at least the latest 30 days.
+        </div>
+        <div class="panel table-wrap history-wrap">
+          <table class="history-table">
+            <thead id="historyHead"></thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+      </section>
+
       <section id="view-ideas" class="view">
         <div class="section-toolbar">
           <div><p class="section-label">AI CONTENT LAB</p><h2>Prioritized video concepts</h2></div>
@@ -171,7 +192,7 @@
         <div class="settings-grid">
           <article class="panel">
             <div class="panel-head"><div><p class="section-label">SUPABASE</p><h3>Connect live data</h3></div><span class="mini-tag">Browser-only</span></div>
-            <p class="muted">Use only your Supabase project URL and <strong>anon/public key</strong>. Never paste a service-role key here.</p>
+            <p class="muted">The live site can read Supabase automatically from GitHub deployment configuration. Manual URL + <strong>anon/public key</strong> remains available as a browser fallback. Never paste a service-role key here.</p>
             <label>Project URL<input id="supabaseUrl" class="control input" placeholder="https://xxxxx.supabase.co" /></label>
             <label>Anon / public key<input id="supabaseAnon" type="password" class="control input" placeholder="eyJ…" /></label>
             <div class="settings-actions">
@@ -209,6 +230,7 @@
   </div>
 
   <div class="toast" id="toast" role="status"></div>
+  <script src="./runtime-config.js"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
