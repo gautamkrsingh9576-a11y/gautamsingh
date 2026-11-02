@@ -62,8 +62,9 @@ In Firebase Console:
 2. Enable **Firestore**.
 3. Add a **Web app** and copy its Firebase web configuration.
 4. Enable **Authentication → Google**.
-5. Create a service-account JSON for GitHub Actions.
-6. Do not use the NewsTeen75 Firebase project.
+5. Under **Authentication → Settings → Authorized domains**, add `gautamkrsingh9576-a11y.github.io`.
+6. Create a service-account JSON for GitHub Actions.
+7. Do not use the NewsTeen75 Firebase project.
 
 ### GitHub repository secrets
 
