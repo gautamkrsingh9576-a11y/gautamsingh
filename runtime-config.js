@@ -1,5 +1,9 @@
-// This file is overwritten during GitHub Pages deployment when Supabase settings exist.
-window.__TREND_RADAR_CONFIG__ = window.__TREND_RADAR_CONFIG__ || {
-  supabaseUrl: "",
-  supabaseAnonKey: ""
+// Generated/overwritten by GitHub Pages deployment when Firebase web config secrets exist.
+window.__ETECH_FIREBASE_CONFIG__ = window.__ETECH_FIREBASE_CONFIG__ || {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
 };
