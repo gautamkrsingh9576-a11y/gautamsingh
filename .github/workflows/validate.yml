@@ -22,6 +22,9 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Install production dependency
+        run: npm install --omit=dev
+
       - name: Validate JavaScript syntax
         run: |
           node --check app.js
