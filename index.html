@@ -40,7 +40,7 @@
         <div class="connection-dot" id="connectionDot"></div>
         <div>
           <strong id="connectionLabel">Demo mode</strong>
-          <span id="connectionSub">Supabase not connected</span>
+          <span id="connectionSub">Firebase not connected</span>
         </div>
       </div>
     </aside>
@@ -191,31 +191,37 @@
         <div class="section-toolbar"><div><p class="section-label">CONNECTION</p><h2>Dashboard settings</h2></div></div>
         <div class="settings-grid">
           <article class="panel">
-            <div class="panel-head"><div><p class="section-label">SUPABASE</p><h3>Connect live data</h3></div><span class="mini-tag">Browser-only</span></div>
-            <p class="muted">The live site can read Supabase automatically from GitHub deployment configuration. Manual URL + <strong>anon/public key</strong> remains available as a browser fallback. Never paste a service-role key here.</p>
-            <label>Project URL<input id="supabaseUrl" class="control input" placeholder="https://xxxxx.supabase.co" /></label>
-            <label>Anon / public key<input id="supabaseAnon" type="password" class="control input" placeholder="eyJ…" /></label>
+            <div class="panel-head"><div><p class="section-label">FIREBASE</p><h3>Live Firestore connection</h3></div><span class="mini-tag" id="firebaseProjectBadge">Not configured</span></div>
+            <p class="muted">The deployed site reads a separate E-TECH Firebase web config. You can also paste the public Firebase web config below as a browser fallback. Do not paste a service-account JSON here.</p>
+            <label>Firebase web config JSON
+              <textarea id="firebaseConfigJson" class="control input config-textarea" rows="7" placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","appId":"..."}'></textarea>
+            </label>
             <div class="settings-actions">
-              <button class="btn primary" id="saveConnection">Save & connect</button>
-              <button class="btn secondary" id="clearConnection">Use demo data</button>
+              <button class="btn primary" id="saveFirebaseConfig">Save & connect</button>
+              <button class="btn secondary" id="clearFirebaseConfig">Use demo data</button>
             </div>
-            <p class="tiny">Connection values are saved only in this browser's localStorage.</p>
+            <div class="setting-row"><span>Signed in</span><strong id="authUserLabel">No</strong></div>
+            <div class="settings-actions">
+              <button class="btn primary" id="googleSignInBtn">Sign in with Google</button>
+              <button class="btn secondary" id="signOutBtn">Sign out</button>
+            </div>
+            <p class="tiny">Firebase web config is public client configuration. Privileged Firebase service-account credentials stay only in GitHub Actions secrets.</p>
           </article>
 
           <article class="panel">
             <div class="panel-head"><div><p class="section-label">AUTOMATION</p><h3>Daily trend run</h3></div><span class="status success">Configured</span></div>
             <div class="setting-row"><span>Schedule</span><strong>Daily · 7:30 AM IST</strong></div>
             <div class="setting-row"><span>Engine</span><strong>GitHub Actions</strong></div>
-            <div class="setting-row"><span>Database</span><strong>Supabase PostgreSQL</strong></div>
-            <div class="setting-row"><span>AI layer</span><strong>OpenAI / Gemini ready</strong></div>
+            <div class="setting-row"><span>Database</span><strong>Firebase Firestore</strong></div>
+            <div class="setting-row"><span>AI layer</span><strong>OpenAI + fallback scoring</strong></div>
           </article>
 
           <article class="panel">
             <div class="panel-head"><div><p class="section-label">SECURITY</p><h3>Production checklist</h3></div></div>
             <ul class="check-list">
-              <li>Keep service-role keys only in GitHub Secrets.</li>
-              <li>Enable RLS on analytics tables.</li>
-              <li>Use Supabase Auth before exposing private analytics.</li>
+              <li>Keep Firebase service-account JSON only in GitHub Secrets.</li>
+              <li>Firestore client access is read-only and protected by Firebase Auth rules.</li>
+              <li>Trend/deal observations are append-only; no automatic 30-day deletion is configured.</li>
               <li>Do not scrape marketplaces that prohibit scraping.</li>
             </ul>
           </article>
@@ -229,8 +235,22 @@
     </main>
   </div>
 
+  <div class="auth-gate" id="authGate" hidden>
+    <div class="auth-card">
+      <img src="./assets/etech-logo.webp" alt="E-TECH" width="72" height="72" />
+      <p class="section-label">E-TECH TREND RADAR</p>
+      <h2>Private analytics dashboard</h2>
+      <p>Sign in with the authorized Google account to load live Firestore data.</p>
+      <button class="btn primary" id="authGateSignIn">Sign in with Google</button>
+      <button class="text-btn" id="authGateDemo">Continue in demo mode</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status"></div>
   <script src="./runtime-config.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore-compat.js"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
