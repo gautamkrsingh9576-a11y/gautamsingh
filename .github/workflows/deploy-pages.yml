@@ -25,6 +25,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Create runtime Supabase config
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          python - <<'PY'
+          import json, os
+          config = {
+              "supabaseUrl": os.environ.get("SUPABASE_URL", ""),
+              "supabaseAnonKey": os.environ.get("SUPABASE_ANON_KEY", ""),
+          }
+          with open("runtime-config.js", "w", encoding="utf-8") as f:
+              f.write("window.__TREND_RADAR_CONFIG__ = " + json.dumps(config) + ";\n")
+          print("Supabase runtime config:", "configured" if all(config.values()) else "not configured; dashboard will use browser fallback/demo")
+          PY
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
