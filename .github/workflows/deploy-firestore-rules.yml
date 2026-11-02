@@ -1,0 +1,54 @@
+name: Deploy Firestore Security Rules
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Validate Firebase secrets
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          DASHBOARD_ADMIN_EMAIL: ${{ secrets.DASHBOARD_ADMIN_EMAIL }}
+        run: |
+          test -n "$FIREBASE_PROJECT_ID"
+          test -n "$FIREBASE_SERVICE_ACCOUNT_JSON"
+          test -n "$DASHBOARD_ADMIN_EMAIL"
+
+      - name: Generate admin-only Firestore rules
+        env:
+          DASHBOARD_ADMIN_EMAIL: ${{ secrets.DASHBOARD_ADMIN_EMAIL }}
+        run: |
+          python - <<'PY'
+          import os
+          email = os.environ["DASHBOARD_ADMIN_EMAIL"].replace("\\", "\\\\").replace('"', '\\"')
+          template = open("firestore.rules.template", "r", encoding="utf-8").read()
+          open("firestore.rules", "w", encoding="utf-8").write(template.replace("__ADMIN_EMAIL__", email))
+          PY
+
+      - name: Configure Google credentials
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/firebase-service-account.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-service-account.json" >> "$GITHUB_ENV"
+
+      - name: Deploy Firestore rules
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: npx --yes firebase-tools@latest deploy --only firestore:rules --project "$FIREBASE_PROJECT_ID" --non-interactive
